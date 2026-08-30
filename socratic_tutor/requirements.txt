@@ -1,0 +1,12 @@
+groq
+langchain
+langchain-community
+chromadb
+sentence-transformers
+pytesseract
+Pillow
+python-dotenv
+pydantic
+fastapi
+uvicorn
+python-multipart
