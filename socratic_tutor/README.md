@@ -59,10 +59,3 @@ All LLM calls go through `src/llm_backend.py`'s `LLMBackend` interface.
 V1 backend: Groq (open-weight Llama models, closed serving API).
 V2: `OllamaBackend` (already stubbed) — same interface, fully local/offline,
 zero architecture change required to switch.
-
-## Deferred to V2
-
-- Audio input
-- Generated-diagram output
-- Multi-subject corpora (Chemistry/Math/Bio)
-- Ollama as default local backend
