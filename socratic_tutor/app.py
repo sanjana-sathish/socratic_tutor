@@ -1,8 +1,9 @@
 """
-FastAPI wrapper. Two modes:
+FastAPI wrapper. Three quiz endpoints:
   /api/chat        - free-form Socratic tutor (TutorPipeline)
   /api/quiz/start  - upload a document, get N generated questions, start a quiz session
   /api/quiz/answer - submit an answer to the current quiz question
+  /api/quiz/reveal - reveal the answer and advance after MAX_HINTS failed attempts
 """
 
 import tempfile
@@ -78,7 +79,15 @@ async def quiz_start(
     quiz_sessions[session_id] = QuizPipeline(questions, persona)
 
     first_question = quiz_sessions[session_id].current_question()["question"]
-    return {"response": f"Quiz started — {len(questions)} questions.\n\nQuestion 1: {first_question}", "mode": "quiz_start"}
+    return {
+        "response": f"Quiz started — {len(questions)} questions.\n\nQuestion 1: {first_question}",
+        "mode": "quiz_start",
+        "question_index": 0,
+        "total_questions": len(questions),
+        "correct_count": 0,
+        "hints_given": 0,
+        "show_reveal_button": False,
+    }
 
 
 @app.post("/api/quiz/answer")
@@ -91,5 +100,29 @@ async def quiz_answer(
         return {"error": "No active quiz for this session — start one first."}
 
     result = quiz_sessions[session_id].handle_answer(message, conversation_history)
+    result["response"] = normalize_latex(result["response"])
+    return result
+
+
+@app.post("/api/quiz/reveal")
+async def quiz_reveal(
+    session_id: str = Form(...),
+):
+    if session_id not in quiz_sessions:
+        return {"error": "No active quiz for this session — start one first."}
+
+    result = quiz_sessions[session_id].reveal_answer()
+    result["response"] = normalize_latex(result["response"])
+    return result
+
+
+@app.post("/api/quiz/next")
+async def quiz_next(
+    session_id: str = Form(...),
+):
+    if session_id not in quiz_sessions:
+        return {"error": "No active quiz for this session — start one first."}
+
+    result = quiz_sessions[session_id].advance_to_next()
     result["response"] = normalize_latex(result["response"])
     return result

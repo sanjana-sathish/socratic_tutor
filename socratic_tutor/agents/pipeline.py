@@ -29,12 +29,14 @@ class TutorPipeline:
         self.in_teach_sequence = False
         self.last_tutor_question = ""
         self.active_subject = None
+        self.original_student_question = ""
 
     def _reset_topic(self):
         self.turn_count = 0
         self.teach_chunks_given = 0
         self.in_teach_sequence = False
         self.last_tutor_question = ""
+        self.original_student_question = ""
 
     def handle_turn(self, student_message: str, conversation_history: str) -> dict:
         
@@ -63,6 +65,7 @@ class TutorPipeline:
 
         if intent == "new_problem":
             self._reset_topic()
+            self.original_student_question = student_message  # anchor the topic
             response = self.generator.generate_probe(
                 student_message, retrieved, conversation_history, config["persona"], is_first_turn=True
             )
@@ -71,12 +74,14 @@ class TutorPipeline:
             correctness = None
 
         elif intent == "requesting_answer":
-            response = self.generator.generate_reveal(
-                retrieved, conversation_history, correct=True, misconception="", persona=config["persona"],
+            # Student is asking for the answer directly — nudge them to try instead
+            response = (
+                "I'm here to help you figure it out, not hand it over! "
+                "Give it a shot — what do you think the answer might be? "
+                "Even a guess is a great starting point."
             )
-            mode = "reveal"
+            mode = "redirect"
             correctness = None
-            self._reset_topic()
 
         elif intent == "confused":
             self.in_teach_sequence = True
@@ -85,6 +90,7 @@ class TutorPipeline:
                 response = self.generator.generate_reveal(
                     retrieved, conversation_history, correct=False,
                     misconception="", persona=config["persona"],
+                    original_question=self.original_student_question,
                 )
                 mode = "reveal"
                 self._reset_topic()
@@ -110,6 +116,7 @@ class TutorPipeline:
                 if correctness["correct"] and self.teach_chunks_given > MAX_TEACH_CHUNKS:
                     response = self.generator.generate_reveal(
                         retrieved, conversation_history, correct=True, misconception="", persona=config["persona"],
+                        original_question=self.original_student_question,
                     )
                     mode = "reveal"
                     self._reset_topic()
@@ -124,6 +131,7 @@ class TutorPipeline:
                         retrieved, conversation_history,
                         correct=correctness["correct"], misconception=correctness["misconception"],
                         persona=config["persona"],
+                        original_question=self.original_student_question,
                     )
                     mode = "reveal"
                     self._reset_topic()
