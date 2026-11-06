@@ -24,6 +24,7 @@ class GroqBackend(LLMBackend):
     def __init__(self, model: str, api_key: str | None = None):
         self.client = Groq(api_key=api_key or os.environ["GROQ_API_KEY"])
         self.model = model
+        self.last_usage = None
 
     def generate(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
         response = self.client.chat.completions.create(
@@ -34,6 +35,8 @@ class GroqBackend(LLMBackend):
                 {"role": "user", "content": user_prompt},
             ],
         )
+        if hasattr(response, "usage") and response.usage:
+            self.last_usage = response.usage
         return response.choices[0].message.content
 
 

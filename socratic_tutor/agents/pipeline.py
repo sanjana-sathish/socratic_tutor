@@ -2,6 +2,7 @@
 Diagnostic -> teach (chunk by chunk) -> short wrap-up, with subject routing.
 """
 
+import time
 from agents.llm_backend import get_backend
 from rag.retriever import CurriculumRetriever
 from agents.subject_classifier import SubjectClassifier
@@ -58,7 +59,9 @@ class TutorPipeline:
 
         is_new_topic = not self.last_tutor_question
         intent = self.classifier.classify(student_message, conversation_history)
+        t_ret_start = time.perf_counter()
         retrieved = self.retriever.query(student_message, subject=config["curriculum_subject_tag"], k=5)
+        retrieval_ms = (time.perf_counter() - t_ret_start) * 1000
 
         if is_new_topic:
             intent = "new_problem"
@@ -148,4 +151,5 @@ class TutorPipeline:
             "response": response, "intent": intent, "mode": mode, "subject": subject,
             "correctness": correctness, "verifier_verdict": verdict,
             "retrieved_topics": [r["metadata"]["topic"] for r in retrieved],
+            "retrieval_ms": round(retrieval_ms, 2),
         }
